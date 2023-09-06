@@ -5,16 +5,18 @@ config();
 
 const client = new Client({ intents: ['Guilds', 'GuildMessages'] });
 const TOKEN = process.env.BOT_TOKEN;
-
-
-console.log('Bot is online');
-
 client.login(TOKEN);
 
-client.on("message", message => {
-  if (message.content.toLowerCase() == "k.shutdown"){
-    message.channel.send("KaraOkay has left the building T--T").then(() => {
-      client.destroy();
-    })
+client.on("ready", () => {
+  console.log('KaraOKAY has entered the building! \u{1F3A4}\u{1F9D1}');
+  const channelId = '1149087508701917225';
+
+  const channel = client.channels.cache.get(channelId);
+  if (channel) {
+    channel.send('KaraOKAY has entered the building! \u{1F3A4}\u{1F9D1}');
+  } else {
+    console.error(`Channel with ID ${channelId} not found.`);
   }
-})
+});
+console.log('Bot is online');
+
