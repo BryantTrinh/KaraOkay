@@ -1,7 +1,8 @@
 {
-  "name": "Wishlist-Seeker",
+  "name": "KaraOkay",
   "version": "0.0.0",
-  "main": "Discord/server/bot.js",
+  "main": "Discord/Discord/server/bot.js",
+  "type": "module",
   "scripts": {
     "start": "node Discord/server/bot.js",
     "develop": "concurrently \"cd server && npm run watch\" \"cd client && npm start\"",
