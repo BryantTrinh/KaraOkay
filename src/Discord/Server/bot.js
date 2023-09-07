@@ -9,7 +9,7 @@ client.login(TOKEN);
 
 client.on("ready", () => {
   console.log('KaraOKAY has entered the building! \u{1F3A4}\u{1F9D1}');
-  const channelId = '1149087508701917225';
+  const channelId = process.env.CHANNEL_ID;
 
   const channel = client.channels.cache.get(channelId);
   if (channel) {
