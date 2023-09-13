@@ -6,7 +6,12 @@ const commands = [
     name: 'ping',
     description: 'Testing ping command',
   },
+  {
+    name: 'join',
+    description: 'Join the voice channel',
+  }
 ];
+
 
 const rest = new REST({ version: '9' }).setToken(process.env.BOT_TOKEN);
 

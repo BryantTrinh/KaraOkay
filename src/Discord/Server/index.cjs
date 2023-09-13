@@ -22,6 +22,32 @@ client.on('ready', () => {
   }
 });
 
+client.on('interactionCreate', async (interaction) => {
+  if (!interaction.isCommand()) return;
+
+  if (interaction.commandName === 'join') {
+    const member = interaction.member;
+    if (!member) {
+      await interaction.reply('You are not in a guild.');
+      return;
+    }
+
+    const channel = member.voice.channel;
+    if (!channel) {
+      await interaction.reply('You are not in a voice channel.');
+      return;
+    }
+
+    try {
+      const connection = await channel.join(); 
+      await interaction.reply(`Joined ${channel.name}!`);
+    } catch (error) {
+      console.error(error);
+      await interaction.reply('There was an error joining the voice channel.');
+    }
+  }
+});
+
 const pingCommand = [
   'ping'
 
@@ -33,6 +59,18 @@ client.on('interactionCreate', async (interaction) => {
   if (interaction.commandName === 'ping') {
     await interaction.reply("Pong!");
   }
+});
+
+client.once('ready', () => {
+ console.log('Ready!');
+});
+
+client.once('reconnecting', () => {
+ console.log('Reconnecting!');
+});
+
+client.once('disconnect', () => {
+ console.log('Disconnect!');
 });
 
 client.login(process.env.BOT_TOKEN);
