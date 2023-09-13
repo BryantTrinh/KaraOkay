@@ -6,6 +6,7 @@ client.login(process.env.BOT_TOKEN);
 
 client.on("ready", async () => {
     console.log(`Logged in as ${client.user.tag}`);
+    
 
     const pingCommand = {
         name: "ping",
@@ -23,3 +24,4 @@ client.on("interactionCreate", async (interaction) => {
         await interaction.reply("Pong!");
     }
 });
+

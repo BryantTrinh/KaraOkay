@@ -4,11 +4,12 @@
   "main": "KaraOkay/src/Discord/server/config/index.cjs",
   "type": "module",
   "scripts": {
-    "start": "node src/Discord/server/config/index.cjs",
+    "start": "node src/Discord/server/index.cjs",
     "develop": "concurrently \"cd server && npm run watch\" \"cd client && npm start\"",
     "install": "cd server && npm i && cd ../client && npm i",
     "seed": "cd server && npm run seed",
-    "build": "cd client && npm run build"
+    "build": "cd client && npm run build",
+    "register": "node src/discord/server/register.cjs"
   },
   "keywords": [],
   "author": "",
