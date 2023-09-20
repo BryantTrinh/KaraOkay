@@ -1,16 +1,26 @@
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v9');
 require('dotenv').config();
+
 const commands = [
   {
     name: 'ping',
-    description: 'Testing ping command',
+    description: 'Ping the bot!',
   },
   {
-    name: 'join',
-    description: 'Join the voice channel',
-  }
+    name: 'play',
+    description: 'Play music in a voice channel',
+    options: [
+      {
+        name: 'query',
+        description: 'Enter a song title',
+        type: 3, // 3 represents STRING
+        required: true,
+      },
+    ],
+  },
 ];
+
 
 
 const rest = new REST({ version: '9' }).setToken(process.env.BOT_TOKEN);
