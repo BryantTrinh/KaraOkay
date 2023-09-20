@@ -19,6 +19,10 @@ const commands = [
       },
     ],
   },
+  {
+    name: 'leave',
+    description: 'Bot leaves the voice channel',
+  },
 ];
 
 

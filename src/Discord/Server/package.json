@@ -23,7 +23,6 @@
     "@discordjs/voice": "^0.16.0",
     "discord-api-types": "^0.37.56",
     "discord.js": "^14.13.0",
-    "discord.js-commando": "^0.12.3",
     "dotenv": "^16.3.1",
     "ffmpeg": "^0.0.4",
     "nodemon": "^3.0.1"
