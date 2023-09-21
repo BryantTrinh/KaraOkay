@@ -1,6 +1,8 @@
 require('dotenv').config();
 const { Client, IntentsBitField, GatewayIntentBits } = require('discord.js');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, NoSubscriberBehavior, getVoiceConnection } = require('@discordjs/voice');
+const { OpusEncoder } = require('@discordjs/opus');
+const { YouTube } = require('youtube-sr');
 const ytdl = require('ytdl-core');
 
 const client = new Client({
@@ -12,7 +14,6 @@ const client = new Client({
     IntentsBitField.Flags.GuildVoiceStates,
   ],
 });
-
 const prefix = '/';
 
 client.once('ready', () => {
@@ -34,49 +35,61 @@ client.on('ready', () => {
 
 client.on('interactionCreate', async (interaction) => {
   if (!interaction.isCommand()) return;
-
-  const { commandName } = interaction;
-
+    const { commandName } = interaction;
   if (commandName === 'ping') {
     await interaction.reply('Pong!');
   } else if (commandName === 'play') {
-      const voiceChannel = interaction.member.voice.channel;
+  const voiceChannel = interaction.member.voice.channel;
 
-      if (!voiceChannel) {
-        await interaction.reply('BORK! You must be in a voice channel to use this command.');
-        return;
-      }
-      const query = interaction.options.getString('query');
+  if (!voiceChannel) {
+    await interaction.reply('BORK! You must be in a voice channel to use this command.');
+    return;
+  }
 
-      const stream = ytdl(query, { filter: 'audioonly' });
+  const query = interaction.options.getString('query');
 
-      const connection = joinVoiceChannel({
-        channelId: voiceChannel.id,
-        guildId: interaction.guild.id,
-        adapterCreator: interaction.guild.voiceAdapterCreator,
-      });
-      console.log(`Voice connection: ${connection}`);
+  try {
+    const results = await YouTube.search(query, { limit: 1 });
 
-      console.log(`Bot is attempting to join voice channel: ${voiceChannel.name}`);
+    if (results.length === 0) {
+      await interaction.reply('No videos found for the given query.');
+      return;
+    }
 
-      const player = createAudioPlayer({
-        behaviors: {
-          noSubscriber: NoSubscriberBehavior.Play,
-        },
-      });
+    const videoUrl = results[0].url;
+    const stream = ytdl(videoUrl, { filter: 'audioonly' });
+    const connection = joinVoiceChannel({
+      channelId: voiceChannel.id,
+      guildId: interaction.guild.id,
+      adapterCreator: interaction.guild.voiceAdapterCreator,
+    });
+    console.log(`Voice connection: ${connection}`);
+
+    console.log(`Bot is attempting to join voice channel: ${voiceChannel.name}`);
+
+    const player = createAudioPlayer({
+      behaviors: {
+        noSubscriber: NoSubscriberBehavior.Play,
+      },
+    });
+
     const resource = createAudioResource(stream, { inputType: 'opus' });
     player.play(resource);
-    
+
     connection.subscribe(player);
-    
+
     player.on('stateChange', (oldState, newState) => {
-    console.log(`Player state change: ${oldState.status} -> ${newState.status}`);
-    if (newState.status === 'idle') {
-    console.log(`Finished playing in voice channel: ${voiceChannel.name}`);
+      console.log(`Player state change: ${oldState.status} -> ${newState.status}`);
+      if (newState.status === 'idle') {
+        console.log(`Finished playing in voice channel: ${voiceChannel.name}`);
         connection.destroy();
       }
     });
-  } else if (commandName === 'leave') {
+  } catch (error) {
+    console.error('Error while playing song:', error);
+    await interaction.reply('An error occurred while playing this song:');
+  }
+} else if (commandName === 'leave') {
     const voiceChannel = interaction.member.voice.channel;
     if (!voiceChannel) {
       await interaction.reply('Bork! You must be in a voice channel to use this command.');
@@ -85,8 +98,8 @@ client.on('interactionCreate', async (interaction) => {
     const connection = getVoiceConnection(voiceChannel.guild.id);
     if (connection) {
       console.log('Found a voice connection, stopping player and destroying connection.');
-      connection.state.audioPlayer.stop(); // Stop the player
-      connection.destroy(); // Destroy the connection
+      connection.state.audioPlayer.stop(); 
+      connection.destroy(); 
           console.log(`Bot is currently in voice channel: ${connection.joinConfig.channelId}`);
       await interaction.reply('Leaving the voice channel');
     } else {

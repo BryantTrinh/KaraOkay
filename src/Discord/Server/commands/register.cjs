@@ -25,8 +25,6 @@ const commands = [
   },
 ];
 
-
-
 const rest = new REST({ version: '9' }).setToken(process.env.BOT_TOKEN);
 
 (async () => {
