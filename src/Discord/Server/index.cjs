@@ -37,9 +37,9 @@ client.on('ready', () => {
 
 function parseISO8601Duration(duration) {
   const matches = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
-  const hours = parseInt(matches[1] || 0);
-  const minutes = parseInt(matches[2] || 0);
-  const seconds = parseInt(matches[3] || 0);
+  const hours = parseInt(matches[1]?.replace('H', '') || 0);
+  const minutes = parseInt(matches[2]?.replace('M', '') || 0);
+  const seconds = parseInt(matches[3]?.replace('S', '') || 0);
 
   return hours * 3600 + minutes * 60 + seconds;
 }
@@ -73,19 +73,21 @@ client.on('interactionCreate', async (interaction) => {
 const videoInfoResponse = await axios.get(`https://www.googleapis.com/youtube/v3/videos?id=${videoId}&part=contentDetails,snippet&key=${apiKey}`);
   console.log('videoInfoResponse:', videoInfoResponse.data);
 
-  if (!videoInfoResponse.data || !videoInfoResponse.data.items || videoInfoResponse.data.items.length === 0) {
-    console.error('Invalid videoInfoResponse data:', videoInfoResponse.data);
-    await interaction.reply('An error occurred while retrieving video details.');
-    return;
-  }
-  const videoInfo = videoInfoResponse.data.items[0];
-  if (!videoInfo.contentDetails) {
-    console.error('Video details (contentDetails) not found:', videoInfo);
-    await interaction.reply('An error occurred while retrieving video details.');
-    return;
-  }
+if (!videoInfoResponse.data || !videoInfoResponse.data.items || videoInfoResponse.data.items.length === 0) {
+  console.error('Invalid videoInfoResponse data:', videoInfoResponse.data);
+  await interaction.reply('An error occurred while retrieving video details.');
+  return;
+}
+const videoInfo = videoInfoResponse.data.items[0];
+if (!videoInfo.contentDetails) {
+  console.error('Video details (contentDetails) not found:', videoInfo);
+  await interaction.reply('An error occurred while retrieving video details.');
+  return;
+}
+
   const duration = videoInfo.contentDetails.duration;
   const snippet = videoInfo.snippet;
+    console.log('Video URL:', `${videoUrl}`);
     console.log('Video Title:', snippet.title);
     console.log('Channel Title:', snippet.channelTitle);
   const videoMetadata = videoInfo.snippet;
@@ -109,14 +111,14 @@ const videoInfoResponse = await axios.get(`https://www.googleapis.com/youtube/v3
     });
 
     const resource = createAudioResource(stream, {
-       inputType: 'opus',
-       metadata: {
+      inputType: 'opus',
+      metadata: {
         title: videoTitle,
         url: videoUrl,
         duration: parseISO8601Duration(duration),
-       },
+      },
     });
-    
+      
     player.play(resource);
     connection.subscribe(player);
 
