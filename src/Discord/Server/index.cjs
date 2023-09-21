@@ -1,4 +1,5 @@
 require('dotenv').config();
+const axios = require('axios');
 const { Client, IntentsBitField, GatewayIntentBits } = require('discord.js');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, NoSubscriberBehavior, getVoiceConnection } = require('@discordjs/voice');
 const { OpusEncoder } = require('@discordjs/opus');
@@ -33,6 +34,16 @@ client.on('ready', () => {
   }
 });
 
+
+function parseISO8601Duration(duration) {
+  const matches = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
+  const hours = parseInt(matches[1] || 0);
+  const minutes = parseInt(matches[2] || 0);
+  const seconds = parseInt(matches[3] || 0);
+
+  return hours * 3600 + minutes * 60 + seconds;
+}
+
 client.on('interactionCreate', async (interaction) => {
   if (!interaction.isCommand()) return;
     const { commandName } = interaction;
@@ -50,22 +61,46 @@ client.on('interactionCreate', async (interaction) => {
 
   try {
     const results = await YouTube.search(query, { limit: 1 });
-
     if (results.length === 0) {
       await interaction.reply('No videos found for the given query.');
       return;
     }
 
-    const videoUrl = results[0].url;
-    const stream = ytdl(videoUrl, { filter: 'audioonly' });
-    const connection = joinVoiceChannel({
-      channelId: voiceChannel.id,
-      guildId: interaction.guild.id,
-      adapterCreator: interaction.guild.voiceAdapterCreator,
-    });
-    console.log(`Voice connection: ${connection}`);
+  const apiKey = process.env.YOUTUBE_KEY;
+  const videoUrl = results[0].url;
+  const videoId = videoUrl.split('v=')[1];
 
-    console.log(`Bot is attempting to join voice channel: ${voiceChannel.name}`);
+const videoInfoResponse = await axios.get(`https://www.googleapis.com/youtube/v3/videos?id=${videoId}&part=contentDetails,snippet&key=${apiKey}`);
+  console.log('videoInfoResponse:', videoInfoResponse.data);
+
+  if (!videoInfoResponse.data || !videoInfoResponse.data.items || videoInfoResponse.data.items.length === 0) {
+    console.error('Invalid videoInfoResponse data:', videoInfoResponse.data);
+    await interaction.reply('An error occurred while retrieving video details.');
+    return;
+  }
+  const videoInfo = videoInfoResponse.data.items[0];
+  if (!videoInfo.contentDetails) {
+    console.error('Video details (contentDetails) not found:', videoInfo);
+    await interaction.reply('An error occurred while retrieving video details.');
+    return;
+  }
+  const duration = videoInfo.contentDetails.duration;
+  const snippet = videoInfo.snippet;
+    console.log('Video Title:', snippet.title);
+    console.log('Channel Title:', snippet.channelTitle);
+  const videoMetadata = videoInfo.snippet;
+
+  const videoTitle = videoMetadata.title;
+
+  const stream = ytdl(videoUrl, { filter: 'audioonly' });
+  const connection = joinVoiceChannel({
+    channelId: voiceChannel.id,
+    guildId: interaction.guild.id,
+    adapterCreator: interaction.guild.voiceAdapterCreator,
+  });
+  console.log(`Voice connection: ${connection}`);
+
+  console.log(`Bot is attempting to join voice channel: ${voiceChannel.name}`);
 
     const player = createAudioPlayer({
       behaviors: {
@@ -73,18 +108,27 @@ client.on('interactionCreate', async (interaction) => {
       },
     });
 
-    const resource = createAudioResource(stream, { inputType: 'opus' });
+    const resource = createAudioResource(stream, {
+       inputType: 'opus',
+       metadata: {
+        title: videoTitle,
+        url: videoUrl,
+        duration: parseISO8601Duration(duration),
+       },
+    });
+    
     player.play(resource);
-
     connection.subscribe(player);
 
-    player.on('stateChange', (oldState, newState) => {
-      console.log(`Player state change: ${oldState.status} -> ${newState.status}`);
-      if (newState.status === 'idle') {
-        console.log(`Finished playing in voice channel: ${voiceChannel.name}`);
-        connection.destroy();
-      }
-    });
+player.on('stateChange', (oldState, newState) => {
+  console.log(`Player state change: ${oldState.status} -> ${newState.status}`);
+ if (newState.status === 'idle') {
+  console.log('Player is now idle. Additional information:');
+  const metadata = player.state.resource ? player.state.resource.metadata : null;
+  console.log(`Finished playing in voice channel: ${voiceChannel.name}`);
+  connection.destroy();
+}
+});
   } catch (error) {
     console.error('Error while playing song:', error);
     await interaction.reply('An error occurred while playing this song:');
