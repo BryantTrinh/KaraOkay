@@ -50,50 +50,36 @@ client.on('interactionCreate', async (interaction) => {
   if (commandName === 'ping') {
     await interaction.reply('Pong!');
   } else if (commandName === 'play') {
-  const voiceChannel = interaction.member.voice.channel;
+    const voiceChannel = interaction.member.voice.channel;
 
-  if (!voiceChannel) {
-    await interaction.reply('BORK! You must be in a voice channel to use this command.');
-    return;
-  }
-
-  const query = interaction.options.getString('query');
-
-  try {
-    const results = await YouTube.search(query, { limit: 1 });
-    if (results.length === 0) {
-      await interaction.reply('No videos found for the given query.');
+    if (!voiceChannel) {
+      await interaction.reply('BORK! You must be in a voice channel to use this command.');
       return;
     }
 
-  const apiKey = process.env.YOUTUBE_KEY;
-  const videoUrl = results[0].url;
-  const videoId = videoUrl.split('v=')[1];
+    const query = interaction.options.getString('query');
 
-const videoInfoResponse = await axios.get(`https://www.googleapis.com/youtube/v3/videos?id=${videoId}&part=contentDetails,snippet&key=${apiKey}`);
-  console.log('videoInfoResponse:', videoInfoResponse.data);
+    try {
+      const results = await searchYouTube(query);
 
-if (!videoInfoResponse.data || !videoInfoResponse.data.items || videoInfoResponse.data.items.length === 0) {
-  console.error('Invalid videoInfoResponse data:', videoInfoResponse.data);
-  await interaction.reply('An error occurred while retrieving video details.');
-  return;
-}
-const videoInfo = videoInfoResponse.data.items[0];
-if (!videoInfo.contentDetails) {
-  console.error('Video details (contentDetails) not found:', videoInfo);
-  await interaction.reply('An error occurred while retrieving video details.');
-  return;
-}
+      if (results.length === 0) {
+        await interaction.reply('No videos found for the given query.');
+        return;
+      }
 
-  const duration = videoInfo.contentDetails.duration;
-  const snippet = videoInfo.snippet;
-    console.log('Video URL:', `${videoUrl}`);
-    console.log('Video Title:', snippet.title);
-    console.log('Channel Title:', snippet.channelTitle);
-  const videoMetadata = videoInfo.snippet;
+      const apiKey = process.env.YOUTUBE_KEY;
+      const videoUrl = results[0].url;
 
-  const videoTitle = videoMetadata.title;
+      const videoInfo = await getVideoInfo(apiKey, videoUrl);
 
+      if (!videoInfo) {
+        await interaction.reply('An error occurred while retrieving video details.');
+        return;
+      }
+
+  const { videoTitle, duration } = videoInfo;
+    console.log(`Video Title: ${videoTitle}`);
+    console.log(`Duration: ${duration}`);
   const stream = ytdl(videoUrl, { filter: 'audioonly' });
   const connection = joinVoiceChannel({
     channelId: voiceChannel.id,
@@ -110,14 +96,14 @@ if (!videoInfo.contentDetails) {
       },
     });
 
-    const resource = createAudioResource(stream, {
-      inputType: 'opus',
-      metadata: {
-        title: videoTitle,
-        url: videoUrl,
-        duration: parseISO8601Duration(duration),
-      },
-    });
+const resource = createAudioResource(stream, {
+        inputType: 'opus',
+        metadata: {
+          title: videoTitle,
+          url: videoUrl,
+          duration,
+        },
+      });
       
     player.play(resource);
     connection.subscribe(player);
@@ -168,3 +154,26 @@ player.on('stateChange', (oldState, newState) => {
   });
 
 client.login(process.env.BOT_TOKEN);
+
+async function searchYouTube(query) {
+  const results = await YouTube.search(query, { limit: 1 });
+  return results;
+}
+
+async function getVideoInfo(apiKey, videoUrl) {
+  const videoId = videoUrl.split('v=')[1];
+  const videoInfoResponse = await axios.get(`https://www.googleapis.com/youtube/v3/videos?id=${videoId}&part=snippet,contentDetails&key=${apiKey}`);
+  if (!videoInfoResponse.data || !videoInfoResponse.data.items || videoInfoResponse.data.items.length === 0) {
+    console.error('Invalid videoInfoResponse data:', videoInfoResponse.data);
+    return null;
+  }
+  const videoInfo = videoInfoResponse.data.items[0];
+  if (!videoInfo.contentDetails || !videoInfo.snippet) {
+    console.error('Video details (contentDetails/snippet) not found:', videoInfo);
+    return null;
+  }
+  const duration = videoInfo.contentDetails.duration;
+  const snippet = videoInfo.snippet;
+  const videoTitle = snippet.title;
+  return { videoTitle, duration };
+}
